@@ -67,10 +67,10 @@ This allows you to:
 
 ### 🧩 Architecture Overview
 
-The system implements a reliable event-driven architecture using Redis Streams to handle Order Payment creation and processing. Below is a breakdown of the full flow:  
+This project implements a reliable event-driven architecture using Redis Streams to handle Order Payment creation and processing. Below is a breakdown of the full flow:  
 
 ```text
-[Client] ── (HTTP POST /order-payment)──▶ [Spring Boot API] ──▶ [Redis Stream: PAYMENT_SUCCESS or PAYMENT_FAILED]
+[Client]──▶ (HTTP POST /order-payment)──▶ [Spring Boot API] ──▶ [Redis Stream: PAYMENT_SUCCESS or PAYMENT_FAILED]
                                                                                          │
                                                                                          ▼
                                                                             [StreamConsumer - every 5s]
@@ -101,6 +101,8 @@ A client sends an HTTP POST request to the `/order-payment` endpoint with the ne
 
 
 ### 🚀 Features  
+
+Below are the core features that make this solution robust and ready for real-world scenarios:  
 
 - **StreamConsumer** processes messages in real-time every 5 seconds using scheduler
 - Acknowledgment (`XACK`) after successful processing
@@ -429,7 +431,8 @@ This confirms the message was safely moved to the DLQ for further inspection or 
 ---
 
 
-## 🔗 Related Repositories
-- For the Redis Stream as Message Producer implementation, check out [Order Payment Service with Redis Streams as Reliable Message Producer for PAYMENT_SUCCESS / PAYMENT_FAILED Events](https://github.com/yoanesber/Spring-Boot-Redis-Stream-Producer).
-- For the Redis Publisher implementation, check out [Spring Boot Redis Publisher with Lettuce](https://github.com/yoanesber/Spring-Boot-Redis-Publisher-Lettuce).
-- For the Redis Subscriber implementation, check out [Spring Boot Redis Subscriber with Lettuce](https://github.com/yoanesber/Spring-Boot-Redis-Subscriber-Lettuce).
+## 🔗 Related Repositories  
+
+- For the Redis Stream as Message Producer implementation, check out [Order Payment Service with Redis Streams as Reliable Message Producer for PAYMENT_SUCCESS / PAYMENT_FAILED Events](https://github.com/yoanesber/Spring-Boot-Redis-Stream-Producer).  
+- For the Redis Publisher implementation, check out [Spring Boot Redis Publisher with Lettuce](https://github.com/yoanesber/Spring-Boot-Redis-Publisher-Lettuce).  
+- For the Redis Subscriber implementation, check out [Spring Boot Redis Subscriber with Lettuce](https://github.com/yoanesber/Spring-Boot-Redis-Subscriber-Lettuce).  
