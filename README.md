@@ -333,7 +333,7 @@ This outputs a millisecond-precision timestamp like: `1744044544714`
 
 To validate that messages that fail during processing are left unacknowledged and stay in the pending list for retry.  
 
-- Given a message in the PAYMENT_FAILED stream that fails processing  
+- Given a message in the `PAYMENT_SUCCESS` stream but with an invalid `paymentMethod` value (`CC`) in the message  
 
 To simulate a failure scenario, the `OrderPaymentService` logic was intentionally modified to reject payments with an invalid payment method:
 
@@ -344,26 +344,26 @@ if (orderPaymentMap.get("paymentMethod").equals("CC")) {
 }
 ```
 
-In this setup, any message containing "paymentMethod": "CC" will be treated as invalid. 
+In this setup, any message containing `"paymentMethod": "CC"` will be treated as invalid. 
 ```bash
 XADD PAYMENT_SUCCESS 1744046314461-0 "id" "\"1744046314461-0\"" "orderId" "\"ORD123456781\"" "amount" "199.99" "currency" "\"USD\"" "paymentMethod" "\"CC\"" "paymentStatus" "\"SUCCESS\"" "cardNumber" "\"1234 5678 9012 3456\"" "cardExpiry" "\"31/12\"" "cardCvv" "\"123\"" "paypalEmail" "" "bankAccount" "" "bankName" "" "transactionId" "\"TXN1743950189267\"" "retryCount" "0" "createdAt" "\"2025-04-07T14:36:29.268562700Z\"" "updatedAt" "\"2025-04-07T14:36:29.268562700Z\""
 ```
 
 - When the handlePaymentFailed scheduler runs  
 
-When such a message is published to the Redis stream (e.g., PAYMENT_SUCCESS), the consumer detects the invalid value during processing and logs an error:  
+When such a message is published to the Redis stream (e.g., `PAYMENT_SUCCESS`), the consumer detects the invalid value during processing and logs an error:  
 
 ```bash
 2025-04-08T00:18:53.503+07:00  INFO 33024 --- [redis-stream-consumer] [       thread-5] c.y.r.s.Impl.OrderPaymentServiceImpl     : Processing payment success: {id=1744046314461-0, orderId=ORD123456781, amount=199.99, currency=USD, paymentMethod=CC, paymentStatus=SUCCESS, cardNumber=1234 5678 9012 3456, cardExpiry=31/12, cardCvv=123, paypalEmail=null, bankAccount=null, bankName=null, transactionId=TXN1743950189267, retryCount=0, createdAt=2025-04-07T14:36:29.268562700Z, updatedAt=2025-04-07T14:36:29.268562700Z}
 2025-04-08T00:18:53.583+07:00 ERROR 33024 --- [redis-stream-consumer] [       thread-5] c.y.r.s.Impl.OrderPaymentServiceImpl     : Order payment is not valid: {id=1744046314461-0, orderId=ORD123456781, amount=199.99, currency=USD, paymentMethod=CC, paymentStatus=SUCCESS, cardNumber=1234 5678 9012 3456, cardExpiry=31/12, cardCvv=123, paypalEmail=null, bankAccount=null, bankName=null, transactionId=TXN1743950189267, retryCount=0, createdAt=2025-04-07T14:36:29.268562700Z, updatedAt=2025-04-07T14:36:29.268562700Z}
 ```
 
-- Then the message should remain unacknowledged and enter the Pending Entries List (PEL)  
+- Then the message should remain **unacknowledged** and enter the **Pending Entries List (PEL)**  
 
 
 3. Test Retry Mechanism for Pending Messages and Move The Messages to a DLQ stream
 
-To test the ability to reprocess unacknowledged messages after a certain idle time, then the message should be moved to a DLQ stream such as PAYMENT_SUCCESS.dlq  
+To test the ability to reprocess unacknowledged messages after a certain idle time, then the message should be moved to a DLQ stream such as `PAYMENT_SUCCESS.dlq`  
 
 ```bash
 2025-04-08T00:19:55.024+07:00  INFO 33024 --- [redis-stream-consumer] [       thread-2] c.y.r.redis.MessageConsumer              : Retrying (1 attempts) message with ID: 1744046314461-0 after 61 seconds of idle time for consumer: payment-success-consumer-1
@@ -381,8 +381,6 @@ To test the ability to reprocess unacknowledged messages after a certain idle ti
 2025-04-08T00:21:55.011+07:00 ERROR 33024 --- [redis-stream-consumer] [       thread-5] c.y.r.redis.MessageConsumer              : Maximum delivery count exceeded for message ID: 1744046314461-0
 2025-04-08T00:21:55.025+07:00  INFO 33024 --- [redis-stream-consumer] [       thread-5] c.y.r.redis.MessageConsumer              : Message with ID 1744046314461-0 moved to DLQ.
 ```
-
-
 
 **Conclusion:** During testing, a message with `RecordID 1744046314461-0` was intentionally sent with an invalid `paymentMethod = CC` to simulate a failure scenario. The consumer retried processing this message three times, with each attempt occurring after a 60-second idle period. On each retry, the `OrderPaymentService` detected the invalid payment and logged an error. After reaching the configured maximum retry threshold (3 attempts), the message was not acknowledged and was successfully moved to the **Dead Letter Queue (DLQ)** stream (`PAYMENT_SUCCESS.dlq`). This behavior demonstrates the system’s robustness in handling persistent failures by isolating problematic messages without losing them.  
 
